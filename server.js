@@ -1,6 +1,7 @@
 // @ts-check
 
 const path = require('path');
+const process = require('process');
 
 const express = require("express");
 const http = require("http");
@@ -78,6 +79,6 @@ io.on("connection", (socket) => {
 
 app.use(express.static(path.join(__dirname, "public/")));
 
-httpServer.listen(8080, () => {
-    console.log("listening 8080")
+httpServer.listen(process.env.PORT, () => {
+    console.log(`listening ${process.env.PORT}`)
 });
