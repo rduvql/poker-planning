@@ -9,9 +9,10 @@
             (click)="chooseComplexity($event, complexity)">
             {{ complexity }}
         </button>
-        <button (click)="clearResults()">
-            clear
-        </button>
+        <button (click)="clearResults()"> clear </button>
+        <button (click)="doRevealAll()"> reveal </button>
+        <button (click)="doHideAll()"> hide </button>
+
     </div>
 
     <br>
@@ -38,7 +39,10 @@
 
         <div>
             <ul id="connected_users">
-                <li *ngFor="let user of connectedUsers"> {{ user.name }} </li>
+                <li *ngFor="let user of connectedUsers"> 
+                    <span> {{ user.name }} </span>
+                    <span> {{ user.choice !== -1 ? '✓' : 'X' }} </span>
+                </li>
             </ul>
         </div>
     </div>

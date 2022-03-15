@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 
 @Component({
     selector: 'app-root',
@@ -8,13 +8,18 @@ import { io } from 'socket.io-client';
 })
 export class AppComponent implements OnInit {
 
-    socket = io({ path: "/socket" })
+    socket?: Socket;
 
     chosenComplexity = -1;
 
     complexities = [1, 2, 3, 5, 8, 13];
 
-    connectedUsers: { id: string, name: string, number: number }[] = [];
+    connectedUsers: { id: string, name: string, choice: number }[] = [];
+
+    isRevealed = false;
+
+    constructor() {
+    }
 
     ngOnInit(): void {
 
@@ -23,61 +28,63 @@ export class AppComponent implements OnInit {
         if (name) {
             name = name.split("=")[1]
 
-            this.socket.on("connect", () => {
-                this.socket.emit("register_user", name)
+            this.socket = io({ path: "/socket", autoConnect: false });
+
+            this.socket?.on("notify", (payload: { id: string, name: string, choice: number }[]) => {
+                this.connectedUsers = payload;
             })
 
-            this.socket.on("register_user", (payload: { id: string, name: string }) => {
-                // console.log("joined", payload)
-                this.connectedUsers.push({ id: payload.id, name: payload.name, number: -1 })
+            this.socket?.on("connect", () => {
+                this.socket?.emit("register_user", name)
             })
 
-            this.socket.on("logout_user", (payload: { id: string }) => {
-                // console.log("leave", payload)
-                this.connectedUsers.splice(this.connectedUsers.findIndex(c => c.id === payload.id), 1)
+            this.socket?.on("reveal", () => {
+                this.isRevealed = true;
             })
 
-            this.socket.on("selected_choice", (payload: { id: string, number: number }) => {
-                // console.log("choice", payload)
-                let user = this.connectedUsers.find(u => u.id === payload.id)
-                if (user) {
-                    user.number = payload.number;
-                }
+            this.socket?.on("hide", () => {
+                this.isRevealed = false;
             })
 
-            this.socket.on("clear_results", () => {
-                this.chosenComplexity = -1;
-                this.connectedUsers.forEach(user => {
-                    user.number = -1
-                })
-            })
+            this.socket?.connect();
         }
 
     }
 
+    doRevealAll() {
+        this.socket?.emit("reveal");
+    }
+
+    doHideAll() {
+        this.socket?.emit("hide");
+    }
+    
     chooseComplexity(event, complexity: number): void {
-        this.socket.emit("selected_choice", complexity)
+        this.socket?.emit("selected_choice", complexity)
         this.chosenComplexity = complexity;
     }
 
     clearResults(): void {
-        this.socket.emit("clear_results")
+        this.socket?.emit("clear_results")
     }
+
 
     getVal(complexity: number) {
 
-        if (this.connectedUsers.every(c => c.number > 0)) {
-            return this.connectedUsers.filter(c => c.number === complexity).length;
+        if (this.isRevealed || this.connectedUsers.every(c => c.choice > 0)) {
+            return this.connectedUsers.filter(c => c.choice === complexity).length;
         }
         return 0;
     }
 
     getVoters(complexity: number) {
 
-        if (this.connectedUsers.every(c => c.number > 0)) {
+        if (this.isRevealed || this.connectedUsers.every(c => c.choice > 0)) {
+            
             return this.connectedUsers
-                .filter(c => c.number === complexity)
+                .filter(c => c.choice === complexity)
                 .map(c => c.name)
+            
         }
         return []
     }
